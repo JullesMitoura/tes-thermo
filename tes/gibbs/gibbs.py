@@ -23,7 +23,7 @@ class Gibbs():
                  kij: pd.DataFrame = None,
                  equation: str = 'Ideal Gas',
                  inhibited_component: str = None,
-                 solver_path: str = None):
+                 solver_path: str = "tes/solver/bin/ipopt.exe"):
         """
         Initializes the Gibbs energy minimizer.
 
