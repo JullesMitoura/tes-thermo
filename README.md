@@ -1,4 +1,4 @@
-# Third-Party Dependencies and Licenses
+## Third-Party Dependencies and Licenses
 
 This project uses the Ipopt solver, which is made available under the Eclipse Public License v1.0 (EPL-1.0). A full copy of the Ipopt license can be verified here: https://github.com/coin-or/Ipopt/blob/stable/3.14/LICENSE
 
