@@ -78,30 +78,154 @@ Finally, for any of the models:
 
 $$\phi_i = \exp(\ln \phi_i)$$
 
-IPOPT Solver:
 
-In all simulation modules of this project, the core of the problem lies in finding the optimal solution for a system described by complex, non-linear equations. For this task, the IPOPT solver was chosen.
+---
+### Usage Example:
+#### Methane Steam Reforming Process
 
-IPOPT (Interior Point Optimizer) is a high-performance, open-source software package designed specifically for solving large-scale Nonlinear Programming (NLP) problems.
+First, you need to install tes-thermo:
 
-The choice of IPOPT for TeS v3 was not accidental and is based on several key technical reasons:
+```python
+pip intsall -qU tes-thermo
+```
+Now you have access to tes-thermo code. With this, you just need to import:
 
-Nature of the Thermodynamic Problem: Chemical and phase equilibrium problems are inherently non-linear. The objective functions (like Gibbs energy) and constraints depend on logarithms of mole fractions (ln(y_i)), complex equations of state, and other relationships that cannot be solved with linear programming methods. IPOPT is specialized for this class of problems.
+```python
+from tes_thermo.utils import Component
+from tes_thermo.gibbs import Gibbs
+import numpy as np
+```
 
-Robust Constraint Handling: IPOPT uses an interior-point method (or barrier method), which is extremely effective for handling problems with both equality (e.g., atomic balance, energy balance) and inequality constraints (e.g., non-negativity of moles, n_i
-ge0). It approaches the optimal solution from within the feasible region, making it robust for the types of constraints found in thermodynamics.
+Define the componentes propriets:
 
-Convergence and Stability: Thermodynamic models can be numerically sensitive. IPOPT is recognized in the academic and industrial communities for its excellent performance and ability to converge to an optimal (or locally optimal) solution in a stable and efficient manner, even for complex and ill-conditioned functions.
+```python
+components_data = {
+    'methane': {
+        'Tc': 190.6, 'Tc_unit': 'K',
+        'Pc': 45.99, 'Pc_unit': 'bar',
+        'omega': 0.012,
+        'Vc': 98.6, 'Vc_unit': 'cm³/mol',
+        'Zc': 0.286, 
+        'deltaHf': -74520 / 1000, 'deltaHf_unit': 'kJ/mol',
+        'deltaGf': -50460 / 1000, 'deltaGf_unit': 'kJ/mol',
+        'structure': {"C": 1, "H": 4},
+        'phase': 'g'
+    },
+    'water': {
+        'Tc': 647.1, 'Tc_unit': 'K',
+        'Pc': 220.55, 'Pc_unit': 'bar',
+        'omega': 0.345,
+        'Vc': 55.9, 'Vc_unit': 'cm³/mol',
+        'Zc': 0.229, 
+        'deltaHf': -241818 / 1000, 'deltaHf_unit': 'kJ/mol',
+        'deltaGf': -228572 / 1000, 'deltaGf_unit': 'kJ/mol',
+        'structure': {"H": 2, "O": 1},
+        'phase': 'g'
+    },
+    'carbon_monoxide': {
+        'Tc': 132.9, 'Tc_unit': 'K',
+        'Pc': 34.99, 'Pc_unit': 'bar',
+        'omega': 0.048,
+        'Vc': 93.4, 'Vc_unit': 'cm³/mol',
+        'Zc': 0.294,
+        'deltaHf': -110525 / 1000, 'deltaHf_unit': 'kJ/mol',
+        'deltaGf': -137169 / 1000, 'deltaGf_unit': 'kJ/mol',
+        'structure': {"C": 1, "O": 1},
+        'phase': 'g'
+    },
+    'carbon_dioxide': {
+        'Tc': 304.2, 'Tc_unit': 'K',
+        'Pc': 73.83, 'Pc_unit': 'bar',
+        'omega': 0.224,
+        'Vc': 94.0, 'Vc_unit': 'cm³/mol',
+        'Zc': 0.274,
+        'deltaHf': -393509 / 1000, 'deltaHf_unit': 'kJ/mol',
+        'deltaGf': -394359 / 1000, 'deltaGf_unit': 'kJ/mol',
+        'structure': {"C": 1, "O": 2},
+        'phase': 'g'
+    },
+    'hydrogen': {
+        'Tc': 33.19, 'Tc_unit': 'K',
+        'Pc': 13.13, 'Pc_unit': 'bar',
+        'omega': -0.216,
+        'Vc': 64.1, 'Vc_unit': 'cm³/mol',
+        'Zc': 0.305,
+        'deltaHf': 0.0, 'deltaHf_unit': 'kJ/mol',
+        'deltaGf': 0.0, 'deltaGf_unit': 'kJ/mol',
+        'structure': {"H": 2},
+        'phase': 'g'
+    },
+    'carbon': {
+        'Tc': 0, 'Tc_unit': 'K',
+        'Pc': 0, 'Pc_unit': 'bar',
+        'omega': 0,
+        'Vc': 0, 'Vc_unit': 'cm³/mol',
+        'Zc': 0,
+        'deltaHf': 0.0, 'deltaHf_unit': 'kJ/mol',
+        'deltaGf': 0.0, 'deltaGf_unit': 'kJ/mol',
+        'structure': {"C": 1},
+        'phase': 's'
+    },
+    'methanol': {
+        'Tc': 512.6, 'Tc_unit': 'K',
+        'Pc': 80.97, 'Pc_unit': 'bar',
+        'omega': 0.564,
+        'Vc': 118.0, 'Vc_unit': 'cm³/mol', 
+        'Zc': 0.224,
+        'deltaHf': -200660 / 1000, 'deltaHf_unit': 'kJ/mol',
+        'deltaGf': -161960 / 1000, 'deltaGf_unit': 'kJ/mol',
+        'structure': {"C": 1, "H": 4, "O": 1},
+        'phase': 'g'
+    }
+}
+```
 
-Integration with Pyomo: The code utilizes the Pyomo modeling framework. IPOPT is one of the standard and best-integrated solvers with Pyomo, allowing the mathematical formulation of the problem to be translated directly and reliably into a format the solver understands. This synergy simplifies code development and maintenance.
+With this informations, you can create your components instances using `Component`:
 
-Open-Source Philosophy: Like TeS, IPOPT is an open-source project (part of the COIN-OR initiative). Its use ensures that the software is completely free, accessible, and transparent, aligning with the project's goals of fostering study and research in thermodynamics.
+```python
+comps = Component.create(components_data)
+```
 
-In summary, IPOPT was chosen because it is a powerful, validated, open-source tool that is technically suited for the class of non-linear optimization problems found in thermodynamic equilibrium simulation, ensuring accurate and reliable results for TeS users.
+The next step is define a polynomial to calculte `Cp`:
 
-The solver can be downloaded from this address:
+```python
+def cp(a, b, c, d):
+    R = 8.314  # Ideal gas constant in J/(mol*K)
+    def cp_function(T):
+        return R * (a + b * T + c * T**2 + d / T**2)
+    return cp_function
+```
 
-https://github.com/coin-or/Ipopt/releases
+And define the values of coefficientes:
+
+```python
+
+cp_coeffs = {
+    'methane':          {'a': 1.702, 'b': 9.081e-3, 'c': -2.164e-6, 'd': 0},
+    'water':            {'a': 3.470, 'b': 1.450e-3, 'c': 0,         'd': 12100},
+    'carbon_monoxide':  {'a': 3.376, 'b': 0.557e-3, 'c': 0,         'd': -3100},
+    'carbon_dioxide':   {'a': 5.457, 'b': 1.045e-3, 'c': 0,         'd': -115700},
+    'hydrogen':         {'a': 3.249, 'b': 0.422e-3, 'c': 0,         'd': 8300},
+    'carbon':           {'a': 1.77,  'b': 0.771e-3,     'c': 0,         'd': -86700},
+    'methanol':         {'a': 2.211, 'b': 12.216e-3,'c': -3.450e-6, 'd': 0}
+}
+
+```
+
+Now, you have all you need to simulate:
+
+```python
+res = gibbs.solve_gibbs(initial=np.array([1, 1, 0, 0, 0, 0, 0]),
+                  T=1200, P=1, T_unit='K', P_unit='bar',)
+                  
+res
+```
+As a result:
+
+```python
+{'Temperature (K)': 1200.0, 'Pressure (bar)': 220.0, 'Methane': 0.17607201808452386, 'Water': 1.0024576179445397, 'Carbon monoxide': 0.15036090499183952, 'Carbon dioxide': 0.17360440825679002, 'Hydrogen': 0.6454229503976403, 'Carbon': 2.7718349964766464e-09, 'Methanol': 2.685497942223023e-06}
+```
+
 
 ---
 
