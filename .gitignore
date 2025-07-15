@@ -3,3 +3,6 @@ __pycache__/
 *.py[cod]
 .DS_Store
 tes/solver/*
+tes_thermo/solver/*
+dist/
+tes_thermo.egg-info/

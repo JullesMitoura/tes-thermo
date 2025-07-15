@@ -22,7 +22,7 @@ Returns:
 
 
 import numpy as np
-from tes.utils import setup_logger
+from tes_thermo.utils import setup_logger
 
 logger = setup_logger()
 

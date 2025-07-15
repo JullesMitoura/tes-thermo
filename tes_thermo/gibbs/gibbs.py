@@ -10,8 +10,8 @@
 import pyomo.environ as pyo
 import pandas as pd
 import numpy as np
-from tes.utils import gibbs_pad, get_solver, setup_logger, UnitConverter
-from tes.eos import fug
+from tes_thermo.utils import gibbs_pad, get_solver, setup_logger, UnitConverter
+from tes_thermo.eos import fug
 
 logger = setup_logger()
 

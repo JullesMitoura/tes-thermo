@@ -25,7 +25,7 @@ Returns:
 
 from typing import Callable, List, Dict
 from scipy.integrate import quad
-from tes.utils import Component
+from tes_thermo.utils import Component
 
 CpFunction = Callable[[float], float]
 CpFactory = Callable[..., CpFunction]
@@ -35,7 +35,7 @@ def gibbs_pad(T: float,                                                         
               cp_polynomial: CpFactory,                                              # Cp polynomial.
               cp_coefficients: Dict[str, Dict[str, float]]) -> List[float]:          # List of coefficients for the Cp polynomial.
     
-    from tes.utils import setup_logger
+    from tes_thermo.utils import setup_logger
     logger = setup_logger()
     T0 = 298.15  # Reference temperature in Kelvin
     

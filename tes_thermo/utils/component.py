@@ -10,7 +10,7 @@
 
     Example Usage:
 
-    from tes.utils import Component
+    from tes_thermo.utils import Component
 
     data = {
         'methane': {
@@ -38,7 +38,7 @@
     {'name': 'ethane', 'Tc': 305.32, 'Pc': 4872000.0, 'omega': 0.099, 'Vc': 0.00014549999999999999, 'Zc': 0.279, 'deltaHf': -84000.0, 'deltaGf': -32000.0}
 """
 
-from tes.utils import UnitConverter
+from tes_thermo.utils import UnitConverter
 
 class Component:
     
