@@ -1,8 +1,4 @@
-## Third-Party Dependencies and Licenses
-
-This project uses the Ipopt solver, which is made available under the Eclipse Public License v1.0 (EPL-1.0). A full copy of the Ipopt license can be verified here: https://github.com/coin-or/Ipopt/blob/stable/3.14/LICENSE
-
-## TeS - Themodynamic Equilibrium Simulation
+# TeS - Themodynamic Equilibrium Simulation
 
 TeS - Thermodynamic Equilibrium Simulation is an open-source software designed to optimize studies in thermodynamic equilibrium and related subjects. TeS is recommended for initial analyses of reactional systems. The current version contains the following simulation module:
 
@@ -82,8 +78,6 @@ Finally, for any of the models:
 
 $$\phi_i = \exp(\ln \phi_i)$$
 
-For solid components, it is assumed that ($\phi_i = 1.0$).
-
 IPOPT Solver:
 
 In all simulation modules of this project, the core of the problem lies in finding the optimal solution for a system described by complex, non-linear equations. For this task, the IPOPT solver was chosen.
@@ -108,5 +102,11 @@ In summary, IPOPT was chosen because it is a powerful, validated, open-source to
 The solver can be downloaded from this address:
 
 https://github.com/coin-or/Ipopt/releases
+
+---
+
+### Third-Party Dependencies and Licenses
+
+This project uses the Ipopt solver, which is made available under the Eclipse Public License v1.0 (EPL-1.0). A full copy of the Ipopt license can be verified here: https://github.com/coin-or/Ipopt/blob/stable/3.14/LICENSE
 
 ---
