@@ -6,7 +6,7 @@ with open("README.md", "r", encoding="utf-8") as arq:
 
 setup(
     name='tes_thermo',
-    version='0.0.9',
+    version='0.1.0',
     license='MIT License',
     author='Julles Mitoura, Antonio Freitas and Adriano Mariano',
     author_email='mitoura96@outlook.com',

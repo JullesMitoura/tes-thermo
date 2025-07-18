@@ -64,11 +64,9 @@ The Virial equation truncated at the second term relates the compressibility fac
 
 $$Z = 1 + \frac{B_{mix} P}{RT}$$
 
-The second Virial coefficient for the mixture ($B_{mix}$) is calculated using the following mixing rule:
+The second Virial coefficient for the mixture is calculated using the following mixing rule:
 
 $$B_{mix} = \sum_{i=1}^{NC} \sum_{j=1}^{NC} y_i y_j B_{ij}$$
-
-Where $B_{ii}$ is the coefficient for the pure component and $B_{ii}$ is the cross-coefficient for the i-j pair. These coefficients are temperature-dependent and are generally obtained from empirical correlations based on critical properties.
 
 The logarithm of the fugacity coefficient for each component i in the mixture is given by:
 
@@ -215,6 +213,12 @@ cp_coeffs = {
 Now, you have all you need to simulate:
 
 ```python
+
+gibbs = Gibbs(components = comps,
+              cp_polynomial_factory=cp,
+              cp_coefficients=cp_coeffs,
+              equation="Ideal Gas",)
+
 res = gibbs.solve_gibbs(initial=np.array([1, 1, 0, 0, 0, 0, 0]),
                   T=1200, P=1, T_unit='K', P_unit='bar',)
                   
