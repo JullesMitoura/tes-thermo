@@ -1,7 +1,7 @@
 from langchain_openai import AzureChatOpenAI
 from tes_thermo.thermo_agent.create_agents import CreateAgent
-from tes_thermo.thermo_agent.tools.ming_tool import MinG
-from tes_thermo.thermo_agent.tools.search_tool import RaG
+from tes_thermo.thermo_agent.ming_tool import MinG
+from tes_thermo.thermo_agent.search_tool import RaG
 from tes_thermo.utils.prompts import Prompts
 
 class Agent:

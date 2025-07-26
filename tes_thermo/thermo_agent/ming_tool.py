@@ -5,7 +5,7 @@ import numpy as np
 import pandas as pd
 from pydantic import BaseModel, Field
 from tes_thermo.utils.units import convert_pressure_to_bar, convert_temperature_to_K
-from tes_thermo.thermo_agent.tools.ming import Gibbs
+from tes_thermo.thermo_agent.ming import Gibbs
 
 class MinGInputs(BaseModel):
     Tmin: Optional[float] = Field(default=600.0, 
