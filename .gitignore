@@ -1,4 +1,5 @@
 .venv/
+.env
 __pycache__/
 *.py[cod]
 .DS_Store
@@ -6,3 +7,4 @@ tes/solver/*
 tes_thermo/solver/*
 dist/
 tes_thermo.egg-info/
+.catalysts-13-00884-v2.pdf

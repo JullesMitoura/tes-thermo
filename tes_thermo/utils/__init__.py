@@ -4,3 +4,4 @@ from .component import Component
 from .dafault_gibbs import gibbs_pad
 from .logging import setup_logger
 from .solver import get_solver
+from .vdb import VectorSearch

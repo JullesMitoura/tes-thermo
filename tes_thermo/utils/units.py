@@ -12,6 +12,37 @@ The class is designed for ease of use and extensibility, with conversion factors
 and formulas stored in dictionaries. This makes it simple to add new units or 
 modify existing ones.
 """
+
+def convert_temperature_to_K(value: float, unit: str) -> float:
+    if value:
+        unit = unit.lower().strip()
+        if unit == "k":
+            return value
+        elif unit == "c" or unit == "°c" or unit == "celsius":
+            return value + 273.15
+        elif unit == "f" or unit == "°f" or unit == "fahrenheit":
+            return (value - 32) * 5/9 + 273.15
+        else:
+            raise ValueError(f"Unidade de temperatura '{unit}' não reconhecida. Use 'K', 'C' ou 'F'.")
+    
+def convert_pressure_to_bar(value: float, unit: str) -> float:
+    if value:
+        unit = unit.lower().strip()
+        if unit == "bar":
+            return value
+        elif unit in ["pa", "pascal"]:
+            return value / 1e5
+        elif unit in ["kpa"]:
+            return value / 100
+        elif unit in ["mpa"]:
+            return value * 10
+        elif unit in ["atm"]:
+            return value * 1.01325
+        elif unit in ["psi"]:
+            return value * 0.0689476
+        else:
+            raise ValueError(f"Unidade de pressão '{unit}' não reconhecida.")
+        
 class UnitConverter:
     TEMPERATURE_CONVERSIONS = {
         'K': 1.0,
@@ -22,14 +53,14 @@ class UnitConverter:
         'R': lambda x: x * 5/9  # Rankine to Kelvin
     }
     PRESSURE_CONVERSIONS = {
-    'Pa': 1 / 100000.0,
-    'kPa': 1 / 100.0,
-    'MPa': 10.0,
-    'bar': 1.0,
-    'atm': 1.01325,
-    'psi': 0.0689476,
-    'mmHg': 0.00133322,
-    'torr': 0.00133322
+    'Pa': 1.0,           
+    'kPa': 1e3,           
+    'MPa': 1e6,           
+    'bar': 1e5,            
+    'atm': 101325.0,     
+    'psi': 6894.76,        
+    'mmHg': 133.322,        
+    'torr': 133.322         
 }
     VOLUME_CONVERSIONS = {
         'm³/mol': 1.0,
