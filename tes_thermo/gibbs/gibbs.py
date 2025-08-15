@@ -12,7 +12,7 @@ class Gibbs():
     def __init__(self,
                  components: dict = None,
                  equation: str = 'Ideal Gas',
-                 inhibited_component: str = None,
+                 inhibited_component=None,
                  solver_path: str = "tes/solver/bin/ipopt.exe"):
         
         self.component_objects = components
@@ -20,7 +20,17 @@ class Gibbs():
         self.components_chemical = [Chemical(ID) for ID in self.thermo_components]
         self.new_components = components['new_components']
         self.new_components_kij = self.new_components
-        self.inhibited_component = inhibited_component
+        
+        # Normalizar inhibited_component para sempre ser uma lista
+        if inhibited_component is None:
+            self.inhibited_components = []
+        elif isinstance(inhibited_component, str):
+            self.inhibited_components = [inhibited_component]
+        elif isinstance(inhibited_component, list):
+            self.inhibited_components = inhibited_component
+        else:
+            raise ValueError("inhibited_component deve ser None, string ou lista de strings")
+        
         self.equation = equation
         self.solver_path = solver_path
         self.components_info = self.define_components()
@@ -31,6 +41,7 @@ class Gibbs():
         logger.info(f"Initializing Gibbs class...")
         logger.info(f"Components created as Chemical from the thermo library: {self.thermo_components}")
         logger.info(f"Manually defined components: {self.new_components}")
+        logger.info(f"Inhibited components: {self.inhibited_components}")
         logger.info(f"Equation of state: {equation}")
 
         if self.equation == "Peng-Robinson":
@@ -46,7 +57,6 @@ class Gibbs():
 
         self.kijs = np.array(self.kijs)
         logger.debug(f"Initial kijs matrix shape: {self.kijs.shape}")
-
 
         if self.new_components and len(self.new_components) > 0:
             for comp in self.new_components:
@@ -195,7 +205,8 @@ class Gibbs():
     
     def _get_bounds(self, initial_moles: np.ndarray) -> tuple:
         """Calculates the upper and lower bounds for the mole number of each component.
-            This allows the user to inhibit the formation of a component, so we define its maximum value as a very small value.
+            This allows the user to inhibit the formation of multiple components, 
+            so we define their maximum value as a very small value.
         """
         logger.debug("Calculating bounds for mole numbers of each component")
         
@@ -203,13 +214,18 @@ class Gibbs():
         epsilon = 1e-5
         bounds_list = []
 
-        inhibited_idx = -1
-        if self.inhibited_component and self.inhibited_component in self.component_names:
-            inhibited_idx = self.component_names.index(self.inhibited_component)
-            logger.info(f"Inhibited component found: {self.inhibited_component} (index: {inhibited_idx})")
+        # Obter índices de todos os componentes inibidos
+        inhibited_indices = []
+        for comp_name in self.inhibited_components:
+            if comp_name in self.component_names:
+                idx = self.component_names.index(comp_name)
+                inhibited_indices.append(idx)
+                logger.info(f"Inhibited component found: {comp_name} (index: {idx})")
+            else:
+                logger.warning(f"Inhibited component '{comp_name}' not found in component list")
 
         for i in range(len(self.component_names)):
-            if i == inhibited_idx:
+            if i in inhibited_indices:
                 bounds_list.append((1e-8, epsilon))
                 logger.debug(f"Bounds for inhibited component {self.component_names[i]}: (1e-8, {epsilon})")
             else:
@@ -222,6 +238,7 @@ class Gibbs():
                 logger.debug(f"Bounds for {self.component_names[i]}: (1e-8, {max(upper_bound, epsilon)})")
 
         logger.debug(f"Bounds calculated for all components: {len(bounds_list)} bounds")
+        logger.info(f"Total inhibited components: {len(inhibited_indices)}")
         return tuple(bounds_list)
     
     def solve_gibbs(self, initial, T, P, T_unit, P_unit, progress_callback=None):

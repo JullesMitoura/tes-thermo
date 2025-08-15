@@ -8,3 +8,4 @@ tes_thermo/solver/*
 dist/
 tes_thermo.egg-info/
 .catalysts-13-00884-v2.pdf
+notebooks/case01.ipynb
