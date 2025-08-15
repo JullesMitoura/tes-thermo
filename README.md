@@ -76,6 +76,74 @@ Finally, for any of the models:
 
 $$\phi_i = \exp(\ln \phi_i)$$
 
+### Peng-Robinson and Soave-Redlich-Kwong:
+
+Based on the chosen equation of state, the following parameters are defined:
+$$\Omega_a$$
+$$\Omega_b$$
+
+#### Temperature-Adjusted Attraction Parameter
+
+$$
+m_i =
+\begin{cases}
+0.37464 + 1.54226 \cdot \omega_i - 0.26992 \cdot \omega_i^2 & \text{(Peng-Robinson)} \\
+0.480 + 1.574 \cdot \omega_i - 0.176 \cdot \omega_i^2 & \text{(SRK)}
+\end{cases}
+$$
+
+$$
+\alpha_i = \left(1 + m_i(1 - \sqrt{T/T_{c,i}})\right)^2 \quad \text{(PR and SRK)}
+$$
+
+$$
+a_i = \Omega_a \cdot \left( \frac{R^2 T_{c,i}^2}{P_{c,i}} \right) \cdot \alpha_i
+\quad ; \quad
+b_i = \Omega_b \cdot \left( \frac{R T_{c,i}}{P_{c,i}} \right)
+$$
+
+#### Binary Interaction Parameter
+$$k_{ij}$$
+
+$$a_{ij} = (1 - k_{ij}) \cdot \sqrt{a_i \cdot a_j}$$
+
+$$
+a_{\text{mix}} = \sum_i \sum_j y_i y_j a_{ij}
+\quad ; \quad
+b_{\text{mix}} = \sum_i y_i b_i
+$$
+
+$$
+A = \frac{a_{\text{mix}} P}{R^2 T^2}
+\quad ; \quad
+B = \frac{b_{\text{mix}} P}{R T}
+$$
+
+The cubic equation is written as:
+$$Z^3 + c_2 Z^2 + c_1 Z + c_0 = 0$$
+
+The coefficients depend on the EOS:
+
+### Peng-Robinson (PR):
+$$Z^3 + (B - 1)Z^2 + (A - 2B - 3B^2)Z + (-AB + B^2 + B^3) = 0$$
+
+### SRK:
+$$Z^3 - Z^2 + (A - B - B^2)Z - AB = 0$$
+
+#### Solution
+Select the largest positive real root (Z) that represents the gas phase.
+
+#### Fugacity Coefficient
+For each component ($i$):
+$$\ln \phi_i = \frac{b_i}{b_{\text{mix}}}(Z - 1) - \ln(Z - B) - \frac{A}{B} \cdot \left( \frac{2 \sum_j y_j a_{ij}}{a_{\text{mix}}} - \frac{b_i}{b_{\text{mix}}} \right) \cdot f(Z, B)$$
+
+Where:
+
+#### For PR:
+$$f(Z, B) = \frac{1}{2\sqrt{2}} \cdot \ln\left( \frac{Z + (1 + \sqrt{2})B}{Z + (1 - \sqrt{2})B} \right)$$
+
+#### For SRK:
+$$f(Z, B) = \ln\left(1 + \frac{B}{Z} \right)$$
 
 ---
 ### Usage Example:
@@ -93,143 +161,70 @@ from tes_thermo.utils import Component
 from tes_thermo.gibbs import Gibbs
 import numpy as np
 ```
-
-Define the componentes propriets:
-
+To define componentes:
 ```python
-components_data = {
-    'methane': {
-        'Tc': 190.6, 'Tc_unit': 'K',
-        'Pc': 45.99, 'Pc_unit': 'bar',
-        'omega': 0.012,
-        'Vc': 98.6, 'Vc_unit': 'cm³/mol',
-        'Zc': 0.286, 
-        'deltaHf': -74520 / 1000, 'deltaHf_unit': 'kJ/mol',
-        'deltaGf': -50460 / 1000, 'deltaGf_unit': 'kJ/mol',
-        'structure': {"C": 1, "H": 4},
-        'phase': 'g'
-    },
-    'water': {
-        'Tc': 647.1, 'Tc_unit': 'K',
-        'Pc': 220.55, 'Pc_unit': 'bar',
-        'omega': 0.345,
-        'Vc': 55.9, 'Vc_unit': 'cm³/mol',
-        'Zc': 0.229, 
-        'deltaHf': -241818 / 1000, 'deltaHf_unit': 'kJ/mol',
-        'deltaGf': -228572 / 1000, 'deltaGf_unit': 'kJ/mol',
-        'structure': {"H": 2, "O": 1},
-        'phase': 'g'
-    },
-    'carbon_monoxide': {
-        'Tc': 132.9, 'Tc_unit': 'K',
-        'Pc': 34.99, 'Pc_unit': 'bar',
-        'omega': 0.048,
-        'Vc': 93.4, 'Vc_unit': 'cm³/mol',
-        'Zc': 0.294,
-        'deltaHf': -110525 / 1000, 'deltaHf_unit': 'kJ/mol',
-        'deltaGf': -137169 / 1000, 'deltaGf_unit': 'kJ/mol',
-        'structure': {"C": 1, "O": 1},
-        'phase': 'g'
-    },
-    'carbon_dioxide': {
-        'Tc': 304.2, 'Tc_unit': 'K',
-        'Pc': 73.83, 'Pc_unit': 'bar',
-        'omega': 0.224,
-        'Vc': 94.0, 'Vc_unit': 'cm³/mol',
-        'Zc': 0.274,
-        'deltaHf': -393509 / 1000, 'deltaHf_unit': 'kJ/mol',
-        'deltaGf': -394359 / 1000, 'deltaGf_unit': 'kJ/mol',
-        'structure': {"C": 1, "O": 2},
-        'phase': 'g'
-    },
-    'hydrogen': {
-        'Tc': 33.19, 'Tc_unit': 'K',
-        'Pc': 13.13, 'Pc_unit': 'bar',
-        'omega': -0.216,
-        'Vc': 64.1, 'Vc_unit': 'cm³/mol',
-        'Zc': 0.305,
-        'deltaHf': 0.0, 'deltaHf_unit': 'kJ/mol',
-        'deltaGf': 0.0, 'deltaGf_unit': 'kJ/mol',
-        'structure': {"H": 2},
-        'phase': 'g'
-    },
-    'carbon': {
-        'Tc': 0, 'Tc_unit': 'K',
-        'Pc': 0, 'Pc_unit': 'bar',
-        'omega': 0,
-        'Vc': 0, 'Vc_unit': 'cm³/mol',
-        'Zc': 0,
-        'deltaHf': 0.0, 'deltaHf_unit': 'kJ/mol',
-        'deltaGf': 0.0, 'deltaGf_unit': 'kJ/mol',
-        'structure': {"C": 1},
-        'phase': 's'
-    },
-    'methanol': {
-        'Tc': 512.6, 'Tc_unit': 'K',
-        'Pc': 80.97, 'Pc_unit': 'bar',
-        'omega': 0.564,
-        'Vc': 118.0, 'Vc_unit': 'cm³/mol', 
-        'Zc': 0.224,
-        'deltaHf': -200660 / 1000, 'deltaHf_unit': 'kJ/mol',
-        'deltaGf': -161960 / 1000, 'deltaGf_unit': 'kJ/mol',
-        'structure': {"C": 1, "H": 4, "O": 1},
-        'phase': 'g'
+new_components = {
+        "methane": {
+            "name": "methane",
+            "Tc": 190.6, "Tc_unit": "K",
+            "Pc": 45.99, "Pc_unit": "bar",
+            "omega": 0.012,
+            "Vc": 98.6, "Vc_unit": "cm³/mol",
+            "Zc": 0.286,
+            "Hfgm": -74520, "Hfgm_unit": "J/mol",
+            "Gfgm": -50460, "Gfgm_unit": "J/mol",
+            "structure": {"C": 1, "H": 4},
+            "phase": "g",
+#            "kijs": [0, 0, 0, 0, 0, 0]
+            "cp_polynomial": lambda T: 8.314 * (1.702 + 0.009081* T -0.000002164*T**2),
+        }
     }
-}
-```
 
-With this informations, you can create your components instances using `Component`:
+components = ['water','carbon monoxide', 'carbon dioxide', 'hydrogen', 'methanol']
+```
+In the example above, `new_components` refers to the components to be added. For these, the user must specify all thermodynamic properties as well as the polynomial to be used to calculate `Cp`. For this example, the following polynomial was used:
+
+$$C_p(T) = R \times \left( 1.702 + 0.009081T - 0.000002164T^2 \right)$$
+
+where $T$ is the temperature in Kelvin and $ C_p $ is the heat capacity in J/(mol·K).
+
+``components`` refers to the components that will be queried using the thermo library, so it is not necessary to indicate thermodynamic properties.
+
+Note that when adding a new component, adding ``kij`` values is optional. If not specified, they will be estimated using the critical volume values.
+
+The next step is to instantiate the components using the ``Component`` class.
 
 ```python
-comps = Component.create(components_data)
+comps = Component(components, new_components)
+comps = comps.get_components()
+gibbs = Gibbs(components=comps,equation='Peng-Robinson')
+res = gibbs.solve_gibbs(T=800, T_unit= 'K',
+                         P=60, P_unit='bar',
+                         initial=np.array([0, 1, 0, 0, 1, 0]))
 ```
 
-The next step is define a polynomial to calculte `Cp`:
+After defining the components, the ``Gibbs`` class is used, and the parameters must be the components and the equation of state to be used. The Gibbs class has the ``solve_gibbs`` method, where the user must specify the parameters to be considered in the simulation.
 
+The results are as follows:
 ```python
-def cp(a, b, c, d):
-    R = 8.314  # Ideal gas constant in J/(mol*K)
-    def cp_function(T):
-        return R * (a + b * T + c * T**2 + d / T**2)
-    return cp_function
-```
-
-And define the values of coefficientes:
-
-```python
-
-cp_coeffs = {
-    'methane':          {'a': 1.702, 'b': 9.081e-3, 'c': -2.164e-6, 'd': 0},
-    'water':            {'a': 3.470, 'b': 1.450e-3, 'c': 0,         'd': 12100},
-    'carbon_monoxide':  {'a': 3.376, 'b': 0.557e-3, 'c': 0,         'd': -3100},
-    'carbon_dioxide':   {'a': 5.457, 'b': 1.045e-3, 'c': 0,         'd': -115700},
-    'hydrogen':         {'a': 3.249, 'b': 0.422e-3, 'c': 0,         'd': 8300},
-    'carbon':           {'a': 1.77,  'b': 0.771e-3,     'c': 0,         'd': -86700},
-    'methanol':         {'a': 2.211, 'b': 12.216e-3,'c': -3.450e-6, 'd': 0}
-}
+{'Temperature (K)': 800.0,
+ 'Pressure (bar)': 60.00000000000001,
+ 'Water': 0.04337941510960611,
+ 'Carbon monoxide': 0.11003626275025695,
+ 'Carbon dioxide': 0.923292149916935,
+ 'Hydrogen': 0.023277493427407873,
+ 'Methanol': 5.225802852767064e-08,
+ 'Methane': 0.9666715055286526}
+````
+The current version of `tes-thermo` also includes `thermo-agent`. To verify its use, use the example shown in:
 
 ```
-
-Now, you have all you need to simulate:
-
-```python
-
-gibbs = Gibbs(components = comps,
-              cp_polynomial_factory=cp,
-              cp_coefficients=cp_coeffs,
-              equation="Ideal Gas",)
-
-res = gibbs.solve_gibbs(initial=np.array([1, 1, 0, 0, 0, 0, 0]),
-                  T=1200, P=1, T_unit='K', P_unit='bar',)
-                  
-res
+tes-thermo
+├─ notebooks
+│  ├─ smr.ipynb
+│  └─ thermo_agent.ipynb <- This example!
 ```
-As a result:
-
-```python
-{'Temperature (K)': 1200.0, 'Pressure (bar)': 220.0, 'Methane': 0.17607201808452386, 'Water': 1.0024576179445397, 'Carbon monoxide': 0.15036090499183952, 'Carbon dioxide': 0.17360440825679002, 'Hydrogen': 0.6454229503976403, 'Carbon': 2.7718349964766464e-09, 'Methanol': 2.685497942223023e-06}
-```
-
+Repository link: https://github.com/JullesMitoura/tes-thermo
 
 ---
 

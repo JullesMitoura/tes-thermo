@@ -25,8 +25,6 @@ class Gibbs():
         self.solver_path = solver_path
         self.components_info = self.define_components()
         self.component_names = [comp['name'] for comp in self.components_info]
-        
-        # Add these missing attributes
         self.total_components = len(self.component_names)
         self.total_species = 0  # Will be set after element matrix creation
 
@@ -38,19 +36,36 @@ class Gibbs():
         if self.equation == "Peng-Robinson":
             db_name = 'ChemSep PR'
             constants, _ = ChemicalConstantsPackage.from_IDs(self.thermo_components)
-        else:
-            db_name = None
-
-        if db_name:
-            self.kijs = IPDB.get_ip_asymmetric_matrix(db_name, constants.CASs, 'kij')
+            try:
+                self.kijs = IPDB.get_ip_asymmetric_matrix(db_name, constants.CASs, 'kij')
+            except:
+                logger.warning("Could not retrieve kijs from database. Using zeros.")
+                self.kijs = np.zeros((len(self.thermo_components), len(self.thermo_components)))
         else:
             self.kijs = np.zeros((len(self.thermo_components), len(self.thermo_components)))
 
+        self.kijs = np.array(self.kijs)
+        logger.debug(f"Initial kijs matrix shape: {self.kijs.shape}")
+
+
         if self.new_components and len(self.new_components) > 0:
             for comp in self.new_components:
-                if 'kijs' not in comp:
-                    comp['kijs'] = [0] * (self.kijs.shape[0] + 1)
+                if 'kijs' not in comp or comp['kijs'] is None:
+                    comp['kijs'] = self._calculate_kijs_for_new_component(comp)
+                    logger.info(f"Calculated kijs for {comp['name']}: {comp['kijs']}")
+                else:
+                    expected_size = self.kijs.shape[0] + 1
+                    actual_size = len(comp['kijs'])
+                    logger.debug(f"Component {comp['name']}: expected kijs size {expected_size}, actual size {actual_size}")
+                    
+                    if actual_size != expected_size:
+                        logger.warning(f"kijs size mismatch for {comp['name']}. Expected {expected_size}, got {actual_size}. Recalculating...")
+                        comp['kijs'] = self._calculate_kijs_for_new_component(comp)
+                    else:
+                        logger.info(f"Using provided kijs for {comp['name']}: {comp['kijs']}")
+                
                 self.kijs = self.add_component_kij(self.kijs, comp['kijs'])
+                logger.debug(f"Updated kijs matrix shape after adding {comp['name']}: {self.kijs.shape}")
 
         element_set = set()
         for chemical in self.components_chemical:
@@ -75,6 +90,56 @@ class Gibbs():
             matrix_rows.append(row)
 
         self.A = np.array(matrix_rows)
+
+    def _calculate_kijs_for_new_component(self, new_comp):
+        """
+        Calcula os parâmetros de interação kij para um novo componente usando a fórmula:
+        kij = 1 - 8*(Vc_i*Vc_j)^0.5 / (Vc_i^(1/3) + Vc_j^(1/3))^3
+        """
+        # Extrair Vc do novo componente
+        Vc_new = new_comp.get('Vc')
+        if Vc_new is None:
+            logger.warning(f"Vc not found for {new_comp['name']}. Setting all kijs to 0.")
+            return [0.0] * (len(self.components_chemical) + 1)
+        
+        # Converter para m³/mol se necessário (assumindo que está em cm³/mol)
+        if Vc_new > 1e-3:  # Likely in cm³/mol
+            Vc_new = Vc_new / 1e6  # Convert to m³/mol
+        
+        kijs = []
+        
+        # Calcular kij com cada componente existente
+        for chem in self.components_chemical:
+            Vc_existing = getattr(chem, 'Vc', None)  # Usar getattr para evitar AttributeError
+            if Vc_existing is None:
+                kij = 0.0
+                logger.warning(f"Vc not found for {chem.name}. Setting kij to 0.")
+            else:
+                # Converter para m³/mol se necessário
+                if Vc_existing > 1e-3:  # Likely in cm³/mol
+                    Vc_existing = Vc_existing / 1e6  # Convert to m³/mol
+                
+                try:
+                    # Aplicar a fórmula: kij = 1 - 8*(Vc_i*Vc_j)^0.5 / (Vc_i^(1/3) + Vc_j^(1/3))^3
+                    numerator = 8 * (Vc_new * Vc_existing)**0.5
+                    denominator = (Vc_new**(1/3) + Vc_existing**(1/3))**3
+                    
+                    if denominator == 0:
+                        kij = 0.0
+                        logger.warning(f"Division by zero when calculating kij between {new_comp['name']} and {chem.name}. Setting kij to 0.")
+                    else:
+                        kij = 1 - numerator / denominator
+                        
+                except Exception as e:
+                    kij = 0.0
+                    logger.warning(f"Error calculating kij between {new_comp['name']} and {chem.name}: {e}. Setting kij to 0.")
+            
+            kijs.append(kij)
+        
+        # kii = 0 (componente consigo mesmo)
+        kijs.append(0.0)
+        
+        return kijs
 
     def define_components(self):
         components_info = []

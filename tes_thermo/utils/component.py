@@ -1,5 +1,9 @@
 from tes_thermo.utils import UnitConverter
 from types import SimpleNamespace
+from tes_thermo.utils.logging import setup_logger
+import numpy as np
+
+logger = setup_logger(__name__)
 
 class Component:
     """
@@ -23,7 +27,7 @@ class Component:
             "Gfgm": -50870 / 1000, "Gfgm_unit": "kJ/mol",
             "structure": {"C": 1, "H": 4},
             "phase": "g",
-            "kijs": [0, 0, 0, 0], # Interaction parameters with other components
+            "kijs": [0, 0, 0, 0], # Interaction parameters with other components (OPCIONAL)
             "cp_polynomial": lambda T: 2.211 + 12.216e-3 * T - 3.450e-6 * T**2
         }
     }
@@ -62,13 +66,22 @@ class Component:
             'Gfgm': UnitConverter.convert_energy,
             'phase': None,         # Optional, no conversion
             'structure': None,     # Optional, no conversion
-            'kijs': None,          # Optional, no conversion
+            'kijs': None,          # Optional, no conversion - REMOVIDO DA OBRIGATORIEDADE
             'cp_coeffs': None,     # Optional, no conversion
             'cp_polynomial': None  # Optional, no conversion
         }
 
+        default_values = {
+            'phase': None,
+            'structure': None,
+            'kijs': None,          # Agora None por padrão
+            'cp_coeffs': None,
+            'cp_polynomial': None
+        }
+
         for name, properties in components_data.items():
             processed_props = {'name': name}
+            processed_props.update(default_values)
 
             for prop_name, converter in property_mapping.items():
                 if prop_name in properties:
@@ -104,6 +117,11 @@ class Component:
         for attr_name in expected_properties:
             if hasattr(self, attr_name):
                 properties[attr_name] = getattr(self, attr_name)
+            else:
+                if attr_name == 'kijs':
+                    properties[attr_name] = None  # Explicitamente None se não definido
+                elif attr_name in ['phase', 'structure', 'cp_coeffs', 'cp_polynomial']:
+                    properties[attr_name] = None
         
         return SimpleNamespace(**properties)
 
