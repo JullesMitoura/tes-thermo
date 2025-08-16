@@ -120,7 +120,7 @@ In the example above, `new_components` refers to the components to be added. For
 
 $$C_p(T) = R \times \left( 1.702 + 0.009081T - 0.000002164T^2 \right)$$
 
-where $T$ is the temperature in Kelvin and $ C_p $ is the heat capacity in J/(mol·K).
+where $T$ is the temperature in Kelvin and `Cp` is the heat capacity in J/(mol·K).
 
 ``components`` refers to the components that will be queried using the thermo library, so it is not necessary to indicate thermodynamic properties.
 
