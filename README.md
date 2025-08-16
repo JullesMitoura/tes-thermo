@@ -2,29 +2,6 @@
   <img src="tes_thermo/imgs/tes_thermo.png" alt="tes-thermo">
 </div>
 
-# Fugacity Coefficient Calculation Methods
-
-## Available Equations of State
-
-The following methods are available for calculating fugacity coefficients:
-
-### 1. Virial Equation of State
-- Uses the virial equation truncated at the second term
-- Employs mixing rules for the second virial coefficient
-- Suitable for moderate pressures and gas-phase calculations
-
-### 2. Peng-Robinson (PR) Equation of State
-- Cubic equation of state with temperature-dependent attraction parameter
-- Uses binary interaction parameters for mixture calculations
-- Good accuracy for hydrocarbon systems and wide range of conditions
-
-### 3. Soave-Redlich-Kwong (SRK) Equation of State
-- Modified Redlich-Kwong equation with temperature correction
-- Incorporates acentric factor correlation
-- Reliable for gas-phase and vapor-liquid equilibrium calculations
-
-Each method calculates the fugacity coefficient for individual components in mixtures, accounting for non-ideal behavior and intermolecular interactions.
-
 # TeS - Themodynamic Equilibrium Simulation
 
 TeS - Thermodynamic Equilibrium Simulation is an open-source software designed to optimize studies in thermodynamic equilibrium and related subjects. TeS is recommended for initial analyses of reactional systems. The current version contains the following simulation module:
