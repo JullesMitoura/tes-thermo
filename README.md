@@ -56,94 +56,28 @@ References:
 
 Mitoura, Julles.; Mariano, A.P. Gasification of Lignocellulosic Waste in Supercritical Water: Study of Thermodynamic Equilibrium as a Nonlinear Programming Problem. Eng 2024, 5, 1096-1111. https://doi.org/10.3390/eng5020060
 
-### 1.1 Fugacity Coefficient Calculation:
+### 1.1 Fugacity Coefficient Calculation Methods
 
-### Virial Equation (2nd Term)
+#### Available Equations of State
 
-The Virial equation truncated at the second term relates the compressibility factor to pressure:
+The following methods are available for calculating fugacity coefficients:
 
-$$Z = 1 + \frac{B_{mix} P}{RT}$$
+#### 1. Virial Equation of State
+- Uses the virial equation truncated at the second term
+- Employs mixing rules for the second virial coefficient
+- Suitable for moderate pressures and gas-phase calculations
 
-The second Virial coefficient for the mixture is calculated using the following mixing rule:
+#### 2. Peng-Robinson (PR) Equation of State
+- Cubic equation of state with temperature-dependent attraction parameter
+- Uses binary interaction parameters for mixture calculations
+- Good accuracy for hydrocarbon systems and wide range of conditions
 
-$$B_{mix} = \sum_{i=1}^{NC} \sum_{j=1}^{NC} y_i y_j B_{ij}$$
+#### 3. Soave-Redlich-Kwong (SRK) Equation of State
+- Modified Redlich-Kwong equation with temperature correction
+- Incorporates acentric factor correlation
+- Reliable for gas-phase and vapor-liquid equilibrium calculations
 
-The logarithm of the fugacity coefficient for each component i in the mixture is given by:
-
-$$\ln \phi_i = \left[ 2 \sum_{j=1}^{NC} y_j B_{ij} - B_{mix} \right] \frac{P}{RT}$$
-
-Finally, for any of the models:
-
-$$\phi_i = \exp(\ln \phi_i)$$
-
-### Peng-Robinson and Soave-Redlich-Kwong:
-
-Based on the chosen equation of state, the following parameters are defined:
-$$\Omega_a$$
-$$\Omega_b$$
-
-#### Temperature-Adjusted Attraction Parameter
-
-$$
-m_i =
-\begin{cases}
-0.37464 + 1.54226 \cdot \omega_i - 0.26992 \cdot \omega_i^2 & \text{(Peng-Robinson)} \\
-0.480 + 1.574 \cdot \omega_i - 0.176 \cdot \omega_i^2 & \text{(SRK)}
-\end{cases}
-$$
-
-$$
-\alpha_i = \left(1 + m_i(1 - \sqrt{T/T_{c,i}})\right)^2 \quad \text{(PR and SRK)}
-$$
-
-$$
-a_i = \Omega_a \cdot \left( \frac{R^2 T_{c,i}^2}{P_{c,i}} \right) \cdot \alpha_i
-\quad ; \quad
-b_i = \Omega_b \cdot \left( \frac{R T_{c,i}}{P_{c,i}} \right)
-$$
-
-#### Binary Interaction Parameter
-$$k_{ij}$$
-
-$$a_{ij} = (1 - k_{ij}) \cdot \sqrt{a_i \cdot a_j}$$
-
-$$
-a_{\text{mix}} = \sum_i \sum_j y_i y_j a_{ij}
-\quad ; \quad
-b_{\text{mix}} = \sum_i y_i b_i
-$$
-
-$$
-A = \frac{a_{\text{mix}} P}{R^2 T^2}
-\quad ; \quad
-B = \frac{b_{\text{mix}} P}{R T}
-$$
-
-The cubic equation is written as:
-$$Z^3 + c_2 Z^2 + c_1 Z + c_0 = 0$$
-
-The coefficients depend on the EOS:
-
-### Peng-Robinson (PR):
-$$Z^3 + (B - 1)Z^2 + (A - 2B - 3B^2)Z + (-AB + B^2 + B^3) = 0$$
-
-### SRK:
-$$Z^3 - Z^2 + (A - B - B^2)Z - AB = 0$$
-
-#### Solution
-Select the largest positive real root (Z) that represents the gas phase.
-
-#### Fugacity Coefficient
-For each component ($i$):
-$$\ln \phi_i = \frac{b_i}{b_{\text{mix}}}(Z - 1) - \ln(Z - B) - \frac{A}{B} \cdot \left( \frac{2 \sum_j y_j a_{ij}}{a_{\text{mix}}} - \frac{b_i}{b_{\text{mix}}} \right) \cdot f(Z, B)$$
-
-Where:
-
-#### For PR:
-$$f(Z, B) = \frac{1}{2\sqrt{2}} \cdot \ln\left( \frac{Z + (1 + \sqrt{2})B}{Z + (1 - \sqrt{2})B} \right)$$
-
-#### For SRK:
-$$f(Z, B) = \ln\left(1 + \frac{B}{Z} \right)$$
+Each method calculates the fugacity coefficient for individual components in mixtures, accounting for non-ideal behavior and intermolecular interactions.
 
 ---
 ### Usage Example:
