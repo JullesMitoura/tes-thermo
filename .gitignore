@@ -2,7 +2,7 @@
 .env
 __pycache__/
 *.py[cod]
-.DS_Store
+/.DS_Store
 tes/solver/*
 tes_thermo/solver/*
 dist/
