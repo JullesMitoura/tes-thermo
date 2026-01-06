@@ -5,7 +5,7 @@ from langchain_community.docstore.in_memory import InMemoryDocstore
 from langchain_community.vectorstores import FAISS
 from langchain_core.documents import Document
 from langchain_openai import AzureOpenAIEmbeddings
-from typing import Dict, List, Optional
+from typing import List, Optional
 import os
 
 

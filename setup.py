@@ -6,11 +6,11 @@ with open("README.md", "r", encoding="utf-8") as arq:
 
 setup(
     name='tes_thermo',
-    version='0.1.7',
+    version='0.1.8',
     license='MIT License',
     author='Julles Mitoura, Antonio Freitas and Adriano Mariano',
     author_email='mitoura96@outlook.com',
-    description='TeS is a tool for simulating reaction processes. It uses the Gibbs energy minimization approach with the help of Pyomo and Ipopt as solvers.',
+    description='TeS is a tool for simulating reaction processes. It uses the Gibbs energy minimization approach written as a nonlinear programming problem with Pyomo and is solved using IPOPT.',
     long_description=readme,
     long_description_content_type="text/markdown",
     keywords='gibbs, thermodynamics, virial, reactions, simulation, pyomo',

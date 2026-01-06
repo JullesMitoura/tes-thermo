@@ -5,7 +5,8 @@ import numpy as np
 import pandas as pd
 from pydantic import BaseModel, Field
 from tes_thermo.utils.units import convert_pressure_to_bar, convert_temperature_to_K
-from tes_thermo.thermo_agent.ming import Gibbs
+from tes_thermo.gibbs import Gibbs
+from tes_thermo.utils import Component
 
 class MinGInputs(BaseModel):
     Tmin: Optional[float] = Field(default=600.0, 
@@ -45,32 +46,59 @@ class MinG(BaseTool):
  
         components = [k for k, v in SelectedComponents.items()]
         compositions = [v for v in SelectedComponents.values()]
-        gibbs = Gibbs(components=components,
+        
+        # Create component structure using Component class
+        comp_obj = Component(components=components, new_component={})
+        components_dict = comp_obj.get_components()
+        
+        # Initialize Gibbs with the correct structure
+        gibbs = Gibbs(components=components_dict,
                       equation=Equation)
         
-        Tmin = convert_temperature_to_K(Tmin, Tunit)
-        Tmax = convert_temperature_to_K(Tmax, Tunit)
-        Pmin = convert_pressure_to_bar(Pmin, Punit)
-        Pmax = convert_pressure_to_bar(Pmax, Punit)
+        Tmin_K = convert_temperature_to_K(Tmin, Tunit)
+        Tmax_K = convert_temperature_to_K(Tmax, Tunit)
+        Pmin_bar = convert_pressure_to_bar(Pmin, Punit)
+        Pmax_bar = convert_pressure_to_bar(Pmax, Punit)
 
-        if Tmin != Tmax:
-            TRange = np.linspace(Tmin, Tmax, 10)
+        if Tmin_K != Tmax_K:
+            TRange = np.linspace(Tmin_K, Tmax_K, 10)
         else:
-            TRange = np.linspace(Tmin, Tmax, 1)
-        if Pmin != Pmax:
-            PRange = np.linspace(Pmin, Pmax, 10)
+            TRange = np.linspace(Tmin_K, Tmax_K, 1)
+        if Pmin_bar != Pmax_bar:
+            PRange = np.linspace(Pmin_bar, Pmax_bar, 10)
         else:
-            PRange = np.linspace(Pmin, Pmax, 1)
+            PRange = np.linspace(Pmin_bar, Pmax_bar, 1)
 
         all_results = []
         for T in TRange:
             for P in PRange:
-                equilibrium_moles = gibbs.solve_gibbs(initial=compositions,T=T,P=P)
+                # solve_gibbs now requires T_unit and P_unit, and returns a dict
+                solution = gibbs.solve_gibbs(
+                    initial=compositions,
+                    T=T,
+                    P=P,
+                    T_unit='K',
+                    P_unit='bar'
+                )
                 
-                row_data = {'T': T, 
-                            'P': P}
-                component_data = dict(zip(components, 
-                                          equilibrium_moles))
+                # Convert solution dict to row_data format
+                row_data = {'T': T, 'P': P}
+                # The solution dict has component names as keys (capitalized and formatted)
+                # The component_names in Gibbs are in the same order as the input components
+                # So we can map by index
+                solution_keys = [k for k in solution.keys() if k not in ["Temperature (K)", "Pressure (bar)"]]
+                component_data = {}
+                
+                # Map by index - solution_keys should be in the same order as gibbs.component_names
+                # which should match the order of input components
+                for i, comp_name in enumerate(components):
+                    if i < len(solution_keys):
+                        # Use the solution key at the same index
+                        component_data[comp_name] = solution[solution_keys[i]]
+                    else:
+                        # Fallback: use original composition if index is out of range
+                        component_data[comp_name] = compositions[i] if i < len(compositions) else 0.0
+                
                 row_data.update(component_data)
                 all_results.append(row_data)
         return pd.DataFrame(all_results)
