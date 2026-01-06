@@ -13,6 +13,7 @@ class Gibbs():
                  components: dict = None,
                  equation: str = 'Ideal Gas',
                  inhibited_component=None,
+                 verbose = False,
                  solver_path: str = "tes/solver/bin/ipopt.exe"):
         
         self.component_objects = components
@@ -20,6 +21,7 @@ class Gibbs():
         self.components_chemical = [Chemical(ID) for ID in self.thermo_components]
         self.new_components = components['new_components']
         self.new_components_kij = self.new_components
+        self.verbose = verbose
         
         # Normalizar inhibited_component para sempre ser uma lista
         if inhibited_component is None:
@@ -103,48 +105,52 @@ class Gibbs():
 
     def _calculate_kijs_for_new_component(self, new_comp):
         """
-        Calcula os parâmetros de interação kij para um novo componente usando a fórmula:
-        kij = 1 - 8*(Vc_i*Vc_j)^0.5 / (Vc_i^(1/3) + Vc_j^(1/3))^3
+        Calcula os parâmetros de interação kij para um novo componente
         """
-        # Extrair Vc do novo componente
         Vc_new = new_comp.get('Vc')
-        if Vc_new is None:
-            logger.warning(f"Vc not found for {new_comp['name']}. Setting all kijs to 0.")
-            return [0.0] * (len(self.components_chemical) + 1)
+        if Vc_new is None or Vc_new == 0:
+            logger.warning(f"Vc not found or zero for {new_comp['name']}. Setting all kijs to 1.0.")
+            # Para componentes sólidos, usar kij = 1.0 com gases
+            return [1.0] * self.kijs.shape[0] + [0.0]  # +1 para incluir ele mesmo
         
-        # Converter para m³/mol se necessário (assumindo que está em cm³/mol)
-        if Vc_new > 1e-3:  # Likely in cm³/mol
-            Vc_new = Vc_new / 1e6  # Convert to m³/mol
+        # Converter para m³/mol se necessário
+        if Vc_new > 1e-3:  # Provavelmente em cm³/mol
+            Vc_new = Vc_new / 1e6  # Converter para m³/mol
         
         kijs = []
         
         # Calcular kij com cada componente existente
         for chem in self.components_chemical:
-            Vc_existing = getattr(chem, 'Vc', None)  # Usar getattr para evitar AttributeError
-            if Vc_existing is None:
-                kij = 0.0
-                logger.warning(f"Vc not found for {chem.name}. Setting kij to 0.")
-            else:
-                # Converter para m³/mol se necessário
-                if Vc_existing > 1e-3:  # Likely in cm³/mol
-                    Vc_existing = Vc_existing / 1e6  # Convert to m³/mol
+            # CORREÇÃO: Verificação mais robusta do Vc
+            if hasattr(chem, 'Vc') and chem.Vc is not None and chem.Vc != 0:
+                Vc_existing = chem.Vc
+                # Converter unidades se necessário
+                if Vc_existing > 1e-3:
+                    Vc_existing = Vc_existing / 1e6
                 
                 try:
-                    # Aplicar a fórmula: kij = 1 - 8*(Vc_i*Vc_j)^0.5 / (Vc_i^(1/3) + Vc_j^(1/3))^3
+                    # Aplicar fórmula kij
                     numerator = 8 * (Vc_new * Vc_existing)**0.5
                     denominator = (Vc_new**(1/3) + Vc_existing**(1/3))**3
                     
                     if denominator == 0:
-                        kij = 0.0
-                        logger.warning(f"Division by zero when calculating kij between {new_comp['name']} and {chem.name}. Setting kij to 0.")
+                        kij = 1.0  # Para interações entre sólido e gás
                     else:
                         kij = 1 - numerator / denominator
-                        
+                        # Limitar kij entre 0 e 1
+                        kij = max(0.0, min(1.0, kij))
+                            
                 except Exception as e:
-                    kij = 0.0
-                    logger.warning(f"Error calculating kij between {new_comp['name']} and {chem.name}: {e}. Setting kij to 0.")
+                    kij = 1.0  # Default para sólido-gás
+                    logger.warning(f"Error calculating kij: {e}. Using default 1.0")
+            else:
+                kij = 1.0  # Para componentes sem Vc definido
             
             kijs.append(kij)
+        
+        # Adicionar kijs para componentes já adicionados anteriormente
+        for _ in range(len(self.new_components) - 1):
+            kijs.append(0.8)  # Interação entre óxidos de ferro
         
         # kii = 0 (componente consigo mesmo)
         kijs.append(0.0)
