@@ -84,14 +84,25 @@ The following methods are available for calculating fugacity coefficients:
 Each method calculates the fugacity coefficient for individual components in mixtures, accounting for non-ideal behavior and intermolecular interactions.
 
 ---
+### Installation
+
+First, install the required Python packages:
+
+```bash
+pip install -qU tes-thermo
+```
+
+**Note for macOS users:** The `tes-thermo` package requires the IPOPT solver. On macOS, you need to install IPOPT separately using Homebrew:
+
+```bash
+brew install ipopt
+```
+
+For other operating systems, IPOPT is typically included with the package or can be installed through your system's package manager.
+
+---
 ### Usage Example:
 #### Methane Steam Reforming Process
-
-First, you need to install tes-thermo:
-
-```python
-pip intsall -qU tes-thermo
-```
 Now you have access to tes-thermo code. With this, you just need to import:
 
 ```python
