@@ -29,6 +29,7 @@ setup(
         'PyMuPDF==1.26.1',
         'langchain==0.3.13',
         'langchain_openai==0.2.14',
+        'langchain_community==0.3.5',
         'langchain_experimental==0.3.4'
     ],
 )

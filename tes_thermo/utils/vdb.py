@@ -1,11 +1,10 @@
+"""
+Vector database using FAISS nativo (sem LangChain).
+"""
 import faiss
 import fitz
-from langchain.text_splitter import MarkdownTextSplitter
-from langchain_community.docstore.in_memory import InMemoryDocstore
-from langchain_community.vectorstores import FAISS
-from langchain_core.documents import Document
-from langchain_openai import AzureOpenAIEmbeddings
-from typing import List, Optional
+import numpy as np
+from typing import List, Optional, Dict, Any
 import os
 
 
@@ -39,44 +38,81 @@ class DocumentProcessor:
             return ""
     
     def create_chunks(self, text: str, chunk_size: int = 1400, chunk_overlap: int = 200) -> List[str]:
-        """Split text into chunks using a MarkdownTextSplitter."""
+        """
+        Split text into chunks using simple text splitting.
+        Replaces LangChain MarkdownTextSplitter with native implementation.
+        """
         if not text:
             return []
         
-        markdown_splitter = MarkdownTextSplitter(
-            chunk_size=chunk_size, 
-            chunk_overlap=chunk_overlap
-        )
-        return markdown_splitter.split_text(text)
+        # Simple chunking implementation
+        words = text.split()
+        chunks = []
+        
+        if len(words) <= chunk_size:
+            return [text]
+        
+        # Split into chunks with overlap
+        start = 0
+        while start < len(words):
+            end = min(start + chunk_size, len(words))
+            chunk = " ".join(words[start:end])
+            chunks.append(chunk)
+            
+            if end >= len(words):
+                break
+                
+            # Move start by chunk_size - overlap
+            start += chunk_size - chunk_overlap
+        
+        return chunks
 
 
 class VectorSearch:
     """
-    Wrapper class for FAISS vector search integration with Azure OpenAI embeddings.
-    Handles the creation of the FAISS index and performs similarity search.
+    Vector search using FAISS nativo without LangChain.
+    Uses OpenAI embeddings directly.
     """
     
-    def __init__(self, vector_store: FAISS):
-        self.vector_store = vector_store
+    def __init__(self, 
+                 index: faiss.Index,
+                 documents: List[Dict[str, Any]],
+                 embeddings: np.ndarray,
+                 embedding_function):
+        """
+        Initialize VectorSearch with FAISS index and documents.
+        
+        Args:
+            index: FAISS index
+            documents: List of document dictionaries with 'text' and 'metadata' keys
+            embeddings: Numpy array of embeddings
+            embedding_function: Function to generate embeddings
+        """
+        self.index = index
+        self.documents = documents
+        self.embeddings = embeddings
+        self.embedding_function = embedding_function
     
     @classmethod
     def from_documents(cls,
                       document_paths: List[str],
-                      embedding: AzureOpenAIEmbeddings,
+                      openai_client,
+                      model_name: str,
                       dimension: int = 1536) -> "VectorSearch":
         """
         Build a FAISS vector store from a list of document file paths.
         
         Args:
-            document_paths (List[str]): List of file paths to PDF documents.
-            embedding (AzureOpenAIEmbeddings): Embedding model instance.
-            dimension (int): Dimension of the embeddings.
+            document_paths: List of file paths to PDF documents
+            openai_client: OpenAI client instance (OpenAI or AzureOpenAI)
+            model_name: Name of the embedding model to use
+            dimension: Dimension of the embeddings
         
         Returns:
-            VectorSearch: Instance with the created FAISS store.
+            VectorSearch: Instance with the created FAISS store
         """
         processor = DocumentProcessor()
-        all_chunks_for_db = {}
+        all_chunks = []
         
         # Process each document path
         for path in document_paths:
@@ -104,71 +140,97 @@ class VectorSearch:
             # Create chunks from extracted text
             chunks = processor.create_chunks(text)
             
-            # Generate source ID from filename
-            source_id = description.replace(' ', '_').lower().removesuffix('.pdf')
+            # Add chunks to list
+            for chunk in chunks:
+                all_chunks.append({
+                    "text": chunk,
+                    "metadata": {"source": description}
+                })
+        
+        if not all_chunks:
+            print("No documents were processed. Creating empty index.")
+            # Create empty index
+            index = faiss.IndexFlatL2(dimension)
             
-            # Add chunks to database dictionary
-            for i, chunk in enumerate(chunks):
-                chunk_id = f"{source_id}_{i}"
-                all_chunks_for_db[chunk_id] = {
-                    "text": chunk, 
-                    "source": description
-                }
+            def embedding_function(texts):
+                if isinstance(texts, str):
+                    texts = [texts]
+                response = openai_client.embeddings.create(
+                    model=model_name,
+                    input=texts
+                )
+                return [item.embedding for item in response.data]
+            
+            return cls(index, [], np.array([]), embedding_function)
+        
+        # Generate embeddings for all chunks
+        print(f"Generating embeddings for {len(all_chunks)} chunks...")
+        texts = [chunk["text"] for chunk in all_chunks]
+        
+        # Create embedding function
+        def embedding_function(texts):
+            if isinstance(texts, str):
+                texts = [texts]
+            response = openai_client.embeddings.create(
+                model=model_name,
+                input=texts
+            )
+            return [item.embedding for item in response.data]
+        
+        embeddings = embedding_function(texts)
+        
+        # Convert to numpy array
+        embeddings_array = np.array(embeddings, dtype=np.float32)
         
         # Create FAISS index
         index = faiss.IndexFlatL2(dimension)
-        vector_store = FAISS(
-            embedding_function=embedding,
-            index=index,
-            docstore=InMemoryDocstore(),
-            index_to_docstore_id={},
-        )
+        index.add(embeddings_array)
         
-        # Prepare documents for vector store
-        documents = []
-        ids = []
+        print(f"Index created successfully with {len(all_chunks)} chunks.")
         
-        for chunk_id, chunk_data in all_chunks_for_db.items():
-            doc = Document(
-                page_content=chunk_data["text"],
-                metadata={"source": chunk_data.get("source", "unknown")}
-            )
-            documents.append(doc)
-            ids.append(chunk_id)
-        
-        # Add documents to vector store
-        if documents:
-            vector_store.add_documents(documents=documents, ids=ids)
-            print(f"Index created successfully with {len(documents)} chunks.")
-        else:
-            print("No documents were processed. Empty index created.")
-        
-        return cls(vector_store)
+        return cls(index, all_chunks, embeddings_array, embedding_function)
     
     def search(self,
                query: str,
                k: int = 10,
-               filter: Optional[str] = None) -> List[Document]:
+               filter: Optional[str] = None) -> List[Dict[str, Any]]:
         """
         Perform a similarity search in the FAISS index.
         
         Args:
-            query (str): Search query text.
-            k (int): Number of results to return.
-            filter (Optional[str]): Optional filter by document source.
+            query: Search query text
+            k: Number of results to return
+            filter: Optional filter by document source
         
         Returns:
-            List[Document]: List of retrieved documents.
+            List of document dictionaries with 'text' and 'metadata' keys
         """
-        if not self.vector_store:
+        if not self.index or self.index.ntotal == 0:
             return []
         
-        search_kwargs = {'k': k}
-        if filter:
-            search_kwargs['filter'] = {"source": filter}
-        
         try:
-            return self.vector_store.similarity_search(query, **search_kwargs)
+            # Generate embedding for query
+            query_embedding = self.embedding_function([query])
+            query_vector = np.array(query_embedding, dtype=np.float32)
+            
+            # Search in FAISS index
+            distances, indices = self.index.search(query_vector, k)
+            
+            # Get results
+            results = []
+            for i, idx in enumerate(indices[0]):
+                if idx < len(self.documents):
+                    doc = self.documents[idx]
+                    # Apply filter if specified
+                    if filter is None or doc["metadata"].get("source") == filter:
+                        results.append({
+                            "text": doc["text"],
+                            "metadata": doc["metadata"],
+                            "distance": float(distances[0][i])
+                        })
+            
+            return results
+            
         except Exception as e:
             print(f"Error during search: {e}")
             return []
